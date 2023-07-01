@@ -19,8 +19,12 @@ const placeSchema = new mongoose.Schema({
         required:[true,'Description is required']
     },
     tags:{
-        type:[String],
+        type:String,
         required:true
+    },
+    date:{
+        type:Date,
+        default:Date.now
     }
 })
 
