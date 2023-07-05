@@ -9,16 +9,16 @@ const placeSchema = new mongoose.Schema({
     placeName:{
         type:String,
         min:[2,'Must be at least 2, got {VALUE}'],
-        max:[30,'Must be at least 30, got {VALUE}'],
+        max:[100,'Must be at max 100, got {VALUE}'],
         required:[true,'Name is required']
     },
     placeDescription:{
         type:String,
         min:[5,'Must be at least 5, got {VALUE}'],
-        max:[500,'Must be at least 500, got {VALUE}'],
+        max:[500,'Must be at max 500, got {VALUE}'],
         required:[true,'Description is required']
     },
-    tags:{
+    placeTags:{
         type:String,
         required:true
     },

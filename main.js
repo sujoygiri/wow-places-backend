@@ -4,6 +4,8 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 
 const placeRouter = require("./routes/addPlace.route");
+const requestLogger = require("./util/requestLogger");
+const errorLogger = require("./util/errorLogger");
 
 const PORT = 3000 || process.env.PORT;
 const HOST = 'localhost';
@@ -26,12 +28,11 @@ mongoose.connect(DB_URL,{dbName:'wowplace',useNewUrlParser: true, useUnifiedTopo
     console.log(err);
 });
 
+server.use(requestLogger)
+
 server.use('/place', placeRouter);
 
-server.use((err, req, res, next) => {
-    console.log(err);
-    res.status(500).json({ message: err.message });
-});
+server.use(errorLogger);
 
 server.listen(PORT, HOST, () => {
     console.log(`Server is running on http://${HOST}:${PORT}`);

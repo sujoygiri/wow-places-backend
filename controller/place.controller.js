@@ -2,7 +2,6 @@ const path = require("node:path");
 const fs = require("node:fs");
 const multer = require("multer");
 const crypto = require("node:crypto");
-const { unescape } = require("node:querystring");
 
 const { body, validationResult } = require("express-validator");
 
@@ -13,8 +12,8 @@ const fsPromises = fs.promises;
 
 placeControllerObj.getPlace = async (req, res, next) => {
     try {
-        const place = await placeModel.find({});
-        res.json(place);
+        const place = await placeModel.find({},{_id:0,__v:0});
+        res.status(200).json(place);
     } catch (err) {
         let error = new Error('No place found!')
         error.status = 404;
@@ -44,17 +43,18 @@ placeControllerObj.imageFilter = async (req, file, cb) => {
     }
 };
 
-placeControllerObj.placeImage = () => body('placeImage').isBase64().withMessage('Invalid image type!');
+placeControllerObj.placeImageValidationChain = () => body('placeImage').isBase64().withMessage('Invalid image type!');
 
-placeControllerObj.placeNameValidationChain = () => body('placeName').notEmpty().withMessage('place name is required').trim().isString().escape().isLength({ min: 2, max: 30 }).withMessage('Place name must be between 2 and 30 characters long');
+placeControllerObj.placeNameValidationChain = () => body('placeName').notEmpty().withMessage('place name is required').trim().isString().escape().isLength({ min: 2, max: 100 }).withMessage('Place name must be between 2 and 30 characters long');
 
 placeControllerObj.placeDescriptionValidationChain = () => body('placeDescription').notEmpty().withMessage('place description is required').trim().isString().escape().isLength({ min: 5, max: 500 }).withMessage('Place description must be between 5 and 500 characters long');
 
-placeControllerObj.tagsValidationChain = () => body('tags').notEmpty().withMessage('place tags is required').isString().withMessage('place tags must be a string').trim().escape();
+placeControllerObj.placeTagsValidationChain = () => body('placeTags').notEmpty().withMessage('place tags is required').isString().withMessage('place tags must be a string').trim().escape();
 
-placeControllerObj.addPlaceValidationChain = () => [placeControllerObj.placeNameValidationChain(), placeControllerObj.placeDescriptionValidationChain(), placeControllerObj.tagsValidationChain()];
+placeControllerObj.addPlaceValidationChain = () => [placeControllerObj.placeNameValidationChain(), placeControllerObj.placeDescriptionValidationChain(), placeControllerObj.placeTagsValidationChain()];
 
 placeControllerObj.addPlace = async (req, res, next) => {
+    
     const result = validationResult(req);
     const deleteImage = (imagePath) => {
         fs.unlink(imagePath, (err) => {
@@ -63,7 +63,6 @@ placeControllerObj.addPlace = async (req, res, next) => {
             }
         });
     };
-    // console.log(fileContent);
     if (result.isEmpty()) {
         try {
             let supportedMagicCode = ['ffd8ffe0', 'ffd8ffe1', '89504e47'];
@@ -75,23 +74,27 @@ placeControllerObj.addPlace = async (req, res, next) => {
                     placeImage: imagePath,
                     placeName: req.body.placeName,
                     placeDescription: req.body.placeDescription,
-                    tags: unescape(req.body.tags)
+                    placeTags: req.body.placeTags
                 };
                 let savedPlaceData = await placeModel.create(placeDetails);
                 res.json({ savedPlaceData, success: 1 });
                 next();
             } else {
                 deleteImage(req.file.path);
-                res.json({ success:0, errors: 'Image not supported!' });
+                res.status(500).json({ success:0, errors: 'Image not supported!' });
                 next();
             }
         } catch (error) {
-            deleteImage(req.file.path);
+            if(req.file){
+                deleteImage(req.file.path);
+            }
             next(error);
         }
     } else {
-        deleteImage(req.file.path);
-        res.json({ success:0, errors: result.array()[0].msg });
+        if(req.file){
+            deleteImage(req.file.path);
+        }
+        res.status(500).json({ success:0, errors: result.array()[0].msg });
         next();
     }
 };
